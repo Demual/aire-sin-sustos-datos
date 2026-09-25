@@ -1,0 +1,10 @@
+# Lo que genera la tarea: se publica, no se guarda.
+sitio/
+descargas/
+
+.venv/
+__pycache__/
+.pytest_cache/
+
+# La clave del ADS va en ~/.cdsapirc o en el secreto ADS_KEY, nunca aquí.
+.cdsapirc

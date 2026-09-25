@@ -1,0 +1,6 @@
+/v1/*
+  Cache-Control: public, max-age=1800
+  Access-Control-Allow-Origin: *
+
+/archivo/*
+  Cache-Control: public, max-age=86400

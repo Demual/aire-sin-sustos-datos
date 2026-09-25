@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datos de Aire sin sustos</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; color: #1b1b1b; background: #fff; }
+  code { background: #f2f2f2; padding: 0 .25em; border-radius: 3px; }
+  @media (prefers-color-scheme: dark) { body { color: #e6e6e6; background: #121212; } code { background: #2a2a2a; } }
+</style>
+</head>
+<body>
+<h1>Datos de Aire sin sustos</h1>
+<p>Previsión de polen, calima y calidad del aire para Europa y Canarias que usa la app
+Aire sin sustos. Se genera cada día a partir de los modelos del Servicio de Vigilancia
+Atmosférica de Copernicus (CAMS): la previsión europea y, para Canarias y la turbidez
+del cielo, la global.</p>
+<p>Un fichero por cuadro de 0,5°: <code>/v1/{lat}_{lon}.json</code>, con la esquina suroeste
+redondeada hacia abajo a medio grado. Resumen de la última pasada en <code>/v1/info.json</code>.</p>
+<h2>Atribución y licencia</h2>
+<p>Contains modified Copernicus Atmosphere Monitoring Service information. Neither the
+European Commission nor ECMWF is responsible for any use that may be made of the
+Copernicus information or data it contains.</p>
+<p>Los datos de origen tienen licencia
+<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+(<a href="https://ads.atmosphere.copernicus.eu/datasets/cams-europe-air-quality-forecasts">CAMS European air quality forecasts</a>,
+<a href="https://ads.atmosphere.copernicus.eu/datasets/cams-global-atmospheric-composition-forecasts">CAMS global atmospheric composition forecasts</a>).
+Cambios: se reparten en cuadros, se interpolan a una rejilla de 0,1°, se redondean, se
+calcula el índice europeo de calidad del aire (tramos de la Agencia Europea de Medio
+Ambiente revisados en 2024) y se guardan las medias diarias de la última semana.</p>
+</body>
+</html>

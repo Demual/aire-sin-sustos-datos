@@ -1,0 +1,66 @@
+# Datos del día: baja la previsión de Copernicus, genera los ficheros y los
+# publica en Cloudflare Pages.
+#
+# Secretos del repositorio: ADS_KEY (clave del Atmosphere Data Store),
+# CLOUDFLARE_API_TOKEN (permiso «Cloudflare Pages: Edit») y
+# CLOUDFLARE_ACCOUNT_ID. Variables: PROYECTO_PAGES (nombre del proyecto) y
+# SITIO_URL (https://<proyecto>.pages.dev, de donde se recogen los días
+# pasados).
+name: Datos del día
+
+on:
+  schedule:
+    # La previsión europea de las 00 UTC está completa a las 08:30 UTC y la
+    # global, garantizada a las 10:00 UTC.
+    - cron: "15 10 * * *"
+    # De repuesto, por si la primera falla o Copernicus se retrasa: si la web
+    # ya tiene la pasada del día, no hace nada.
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: datos
+  cancel-in-progress: false
+
+jobs:
+  datos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - run: python -m pytest -q tests
+
+      - name: Generar
+        id: generar
+        env:
+          ADS_KEY: ${{ secrets.ADS_KEY }}
+          SITIO_URL: ${{ vars.SITIO_URL }}
+        run: python -m aire --salida sitio ${{ github.event_name == 'schedule' && '--si-falta' || '' }}
+
+      - name: Publicar
+        if: steps.generar.outputs.publicar == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy sitio --project-name=${{ vars.PROYECTO_PAGES }} --branch=main --commit-dirty=true
+
+      - name: Mantener viva la programación
+        # GitHub apaga las tareas programadas de un repositorio público tras
+        # 60 días sin actividad. Volver a activarla cuenta como actividad.
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/diaria.yml/enable"

@@ -1,0 +1,8 @@
+ecmwf-datastores-client>=0.5.3
+global-land-mask>=1.0.0
+netCDF4>=1.7.4
+numpy>=2.3
+scipy>=1.16
+timezonefinder>=8.0
+xarray>=2025.9
+pytest>=8.4
