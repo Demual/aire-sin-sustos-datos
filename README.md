@@ -94,9 +94,11 @@ respuesta rota.
 
 1. Un repositorio **público** en GitHub con esta carpeta como raíz (las
    Actions de un repositorio público no gastan minutos).
-2. En Cloudflare, un proyecto de Pages de subida directa. Su nombre va en la
-   variable del repositorio `PROYECTO_PAGES` y su dirección
-   (`https://<proyecto>.pages.dev`) en `SITIO_URL`.
+2. En Cloudflare, un proyecto de Pages de subida directa con rama de
+   producción `main`. Su nombre va en la variable del repositorio
+   `PROYECTO_PAGES` y su dirección (`https://<proyecto>.pages.dev`) en
+   `SITIO_URL`. Al crearlo, súbele a mano lo de `sitio_base/`: la tarea lee
+   de la web los días pasados y falla si la dirección todavía no existe.
 3. Secretos del repositorio: `ADS_KEY` (la clave del ADS),
    `CLOUDFLARE_API_TOKEN` (con permiso «Cloudflare Pages: Edit») y
    `CLOUDFLARE_ACCOUNT_ID`.
