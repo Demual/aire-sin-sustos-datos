@@ -56,7 +56,10 @@ defecto, la variable `SITIO_URL`).
 
 `/v1/{lat0}_{lon0}.json`, con la esquina suroeste del cuadro redondeada hacia
 abajo a medio grado: Granada (37,18, −3,60) está en `/v1/37.0_-4.0.json`. Si
-no existe (mar, o fuera de Europa y Canarias), la respuesta es 404.
+no existe (mar, o fuera de Europa y Canarias), la respuesta es 404 gracias a
+`sitio_base/404.html`: sin él, Cloudflare Pages toma la web por una aplicación
+de una sola página y devuelve la portada con un 200, que la app lee como una
+respuesta rota.
 
 ```jsonc
 {
