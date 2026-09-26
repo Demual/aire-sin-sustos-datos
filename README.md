@@ -104,9 +104,13 @@ respuesta rota.
    `CLOUDFLARE_ACCOUNT_ID`.
 
 `.github/workflows/diaria.yml` se ejecuta a las 10:15 UTC y, de repuesto, a
-las 12:30 UTC, que no hace nada si la web ya tiene la pasada del día. Al
-terminar vuelve a activarse a sí misma: GitHub apaga las tareas programadas de
-los repositorios públicos tras 60 días sin actividad.
+las 12:30 UTC, que no hace nada si la web ya tiene la pasada del día. Después
+de publicar borra las publicaciones viejas de Cloudflare (`aire/despliegues.py`):
+cada una son unos 280 MB y se guardan todas. Se quedan las tres últimas, para
+poder volver atrás si una sale mal, y la que esté en marcha; al lanzarla a mano
+se puede elegir cuántas. Al terminar vuelve a activarse a sí misma: GitHub
+apaga las tareas programadas de los repositorios públicos tras 60 días sin
+actividad.
 
 ## Licencia y atribución
 

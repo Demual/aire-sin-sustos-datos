@@ -1,5 +1,5 @@
-# Datos del día: baja la previsión de Copernicus, genera los ficheros y los
-# publica en Cloudflare Pages.
+# Datos del día: baja la previsión de Copernicus, genera los ficheros, los
+# publica en Cloudflare Pages y borra las publicaciones viejas.
 #
 # Secretos del repositorio: ADS_KEY (clave del Atmosphere Data Store),
 # CLOUDFLARE_API_TOKEN (permiso «Cloudflare Pages: Edit») y
@@ -17,6 +17,11 @@ on:
     # ya tiene la pasada del día, no hace nada.
     - cron: "30 12 * * *"
   workflow_dispatch:
+    inputs:
+      conservar:
+        description: Publicaciones de Cloudflare que se guardan al terminar
+        type: number
+        default: 3
 
 permissions:
   contents: read
@@ -56,6 +61,18 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy sitio --project-name=${{ vars.PROYECTO_PAGES }} --branch=main --commit-dirty=true
+
+      - name: Borrar publicaciones viejas
+        if: steps.generar.outputs.publicar == 'true'
+        # Cada una son unos 280 MB. Los datos ya están publicados: si esto
+        # falla, que no tumbe la tarea.
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROYECTO_PAGES: ${{ vars.PROYECTO_PAGES }}
+          CONSERVAR: ${{ inputs.conservar }}
+        run: python -m aire.despliegues
 
       - name: Mantener viva la programación
         # GitHub apaga las tareas programadas de un repositorio público tras
