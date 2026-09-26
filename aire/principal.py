@@ -28,8 +28,9 @@ def _ya_publicado(dia: dt.date, sitio: str | None) -> bool:
     """Si la web ya tiene la pasada de hoy (para la ejecución de repuesto)."""
     if not sitio:
         return False
+    url = f"{sitio.rstrip('/')}/v{c.VERSION}/info.json"
     try:
-        with urllib.request.urlopen(f"{sitio.rstrip('/')}/v{c.VERSION}/info.json", timeout=30) as r:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": c.AGENTE}), timeout=30) as r:
             return json.load(r).get("run", "").startswith(dia.isoformat())
     except Exception:
         return False

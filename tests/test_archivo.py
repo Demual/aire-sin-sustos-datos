@@ -1,4 +1,5 @@
 import datetime as dt
+import urllib.error
 
 import numpy as np
 import pytest
@@ -6,6 +7,20 @@ import pytest
 from aire import archivo, config as c
 
 nan = np.nan
+
+
+def test_a_la_web_se_le_pide_con_un_user_agent_propio(monkeypatch):
+    # Al de Python, Cloudflare le contesta 403 («error code: 1010»).
+    pedidas = []
+
+    def falso(peticion, timeout):
+        pedidas.append(peticion)
+        raise urllib.error.HTTPError(peticion.full_url, 404, "Not Found", {}, None)
+
+    monkeypatch.setattr(archivo.urllib.request, "urlopen", falso)
+    assert archivo.leer(dt.date(2026, 9, 25), "https://ejemplo.pages.dev/") is None
+    assert pedidas[0].full_url == "https://ejemplo.pages.dev/archivo/2026-09-25.npz"
+    assert pedidas[0].get_header("User-agent") == c.AGENTE
 
 
 def _horario(valor, horas=c.HORAS):

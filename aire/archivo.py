@@ -67,8 +67,9 @@ def leer(dia: dt.date, fuente: str | None) -> bytes | None:
         return None
     if fuente.startswith(("http://", "https://")):
         url = f"{fuente.rstrip('/')}/archivo/{nombre(dia)}"
+        peticion = urllib.request.Request(url, headers={"User-Agent": c.AGENTE})
         try:
-            with urllib.request.urlopen(url, timeout=60) as r:
+            with urllib.request.urlopen(peticion, timeout=60) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
             if e.code == 404:

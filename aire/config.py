@@ -66,3 +66,7 @@ ATRIBUCION = (
     "be made of the Copernicus information or data it contains."
 )
 LICENCIA = "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+
+# Para pedirle cosas a la web publicada. Con el User-Agent de Python,
+# Cloudflare contesta 403 («error code: 1010»: firma de navegador vetada).
+AGENTE = "AireSinSustos-datos/1 (+https://github.com/Demual/aire-sin-sustos-datos)"
