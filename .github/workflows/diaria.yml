@@ -16,6 +16,11 @@ on:
     # De repuesto, por si la primera falla o Copernicus se retrasa: si la web
     # ya tiene la pasada del día, no hace nada.
     - cron: "30 12 * * *"
+    # Y dos más: GitHub no garantiza las programadas (el 27/09/2026 no lanzó
+    # ninguna de las dos de arriba). Con la pasada ya publicada, cada una
+    # termina en un par de minutos.
+    - cron: "45 14 * * *"
+    - cron: "40 17 * * *"
   workflow_dispatch:
     inputs:
       conservar:

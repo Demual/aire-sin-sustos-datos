@@ -104,7 +104,9 @@ respuesta rota.
    `CLOUDFLARE_ACCOUNT_ID`.
 
 `.github/workflows/diaria.yml` se ejecuta a las 10:15 UTC y, de repuesto, a
-las 12:30 UTC, que no hace nada si la web ya tiene la pasada del día. Después
+las 12:30, 14:45 y 17:40 UTC, que no hacen nada si la web ya tiene la pasada
+del día: GitHub no garantiza las tareas programadas, y el 27/09/2026 no lanzó
+ninguna de las dos primeras. Después
 de publicar borra las publicaciones viejas de Cloudflare (`aire/despliegues.py`):
 cada una son unos 280 MB y se guardan todas. Se quedan las tres últimas, para
 poder volver atrás si una sale mal, y la que esté en marcha; al lanzarla a mano
