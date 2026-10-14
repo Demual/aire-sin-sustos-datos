@@ -36,9 +36,16 @@ function metFalso(...respuestas) {
     const r = respuestas.shift();
     if (r instanceof Error) throw r;
     if (r === 'cuelga') {
-      // No contesta nunca: solo acaba si se corta con la señal.
+      // No contesta nunca: solo acaba si se corta con la señal. El intervalo
+      // mantiene vivo el proceso: el temporizador de AbortSignal.timeout no
+      // lo hace (en Node 20, el de la tarea diaria, el test se quedaba sin
+      // terminar).
       return new Promise((_, rechazar) => {
-        opciones.signal.addEventListener('abort', () => rechazar(opciones.signal.reason));
+        const vivo = setInterval(() => {}, 1000);
+        opciones.signal.addEventListener('abort', () => {
+          clearInterval(vivo);
+          rechazar(opciones.signal.reason);
+        });
       });
     }
     return r();
