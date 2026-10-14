@@ -31,8 +31,9 @@ const GUARDAR_DE_MAS_S = 24 * 3600;
 // Si MET no manda Expires (no debería), media hora.
 const CADUCIDAD_POR_DEFECTO_S = 30 * 60;
 
-// Cuánto se da por buena una copia caducada cuando MET falla: la app no
-// vuelve a pedir hasta entonces.
+// Cuando MET falla (un 429 sobre todo, que pide frenar en el acto), en este
+// tiempo nadie vuelve a llamarle por ese punto: se da la última copia, o un
+// 503 si no la hay. Tampoco la app vuelve a pedir antes.
 const REINTENTO_S = 10 * 60;
 
 /** Grados con dos decimales (unos 1,1 km), o null si no vale. */
@@ -62,6 +63,12 @@ function copia(cuerpo, cabecerasMet, ahora) {
   return new Response(cuerpo, { status: 200, headers: h });
 }
 
+function sinPrevision(estado) {
+  return texto(estado, 'MET Norway no ha contestado. Vuelve a intentarlo en un rato.', {
+    'Retry-After': String(REINTENTO_S),
+  });
+}
+
 function texto(estado, mensaje, extra = {}) {
   return new Response(mensaje, {
     status: estado,
@@ -85,7 +92,15 @@ export async function responderMet(request, { cache, fetch, ahora }) {
 
   const t = ahora();
   const clave = new Request(new URL(`/met/complete?lat=${lat}&lon=${lon}`, url).toString());
+  // La marca de «MET ha fallado y no hay copia»: hasta su hora, ni se le llama.
+  const claveMarca = new Request(`${clave.url}&sin-copia=1`);
   let guardada = await cache.match(clave);
+
+  if (!guardada) {
+    const marca = await cache.match(claveMarca);
+    const hasta = Date.parse(marca?.headers.get('Expires') ?? '');
+    if (Number.isFinite(hasta) && t < hasta) return sinPrevision(503);
+  }
 
   if (!guardada || t >= caducidad(guardada, t)) {
     const cabeceras = { 'User-Agent': AGENTE, Accept: 'application/json' };
@@ -113,17 +128,25 @@ export async function responderMet(request, { cache, fetch, ahora }) {
       guardada = copia(await guardada.arrayBuffer(), h, t);
       await cache.put(clave, guardada.clone());
     } else if (guardada) {
-      // MET falla (429, 5xx, sin red): la última buena, un rato.
+      // MET falla (429, 5xx, sin red): la última buena, y se guarda así para
+      // que en los próximos minutos nadie vuelva a llamarle por este punto.
       const h = new Headers(guardada.headers);
       h.set('Expires', new Date(t + REINTENTO_S * 1000).toUTCString());
+      h.set('Cache-Control', `public, max-age=${REINTENTO_S + GUARDAR_DE_MAS_S}`);
       h.set('X-Aire-Copia', 'caducada');
-      guardada = new Response(guardada.body, { status: 200, headers: h });
+      guardada = new Response(await guardada.arrayBuffer(), { status: 200, headers: h });
+      await cache.put(clave, guardada.clone());
     } else {
-      return texto(
-        r?.status === 429 ? 503 : 502,
-        'MET Norway no ha contestado. Vuelve a intentarlo en un rato.',
-        { 'Retry-After': String(REINTENTO_S) },
+      await cache.put(
+        claveMarca,
+        new Response('', {
+          headers: {
+            Expires: new Date(t + REINTENTO_S * 1000).toUTCString(),
+            'Cache-Control': `public, max-age=${REINTENTO_S}`,
+          },
+        }),
       );
+      return sinPrevision(r?.status === 429 ? 503 : 502);
     }
   }
 

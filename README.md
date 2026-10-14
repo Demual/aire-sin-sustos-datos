@@ -69,7 +69,8 @@ usuarios no llamen desde cada móvil (auditoría legal del 14/10/2026, A-R1).
     día más;
   - al caducar, vuelve a pedir con `If-Modified-Since` (un 304 alarga la
     copia);
-  - si MET falla, da la última copia diez minutos.
+  - si MET falla (un 429 sobre todo), da la última copia y no le vuelve a
+    llamar por ese punto en diez minutos; sin copia, un 503 durante ese rato.
   - A la app le pasa `Expires` y `Last-Modified` y le contesta 304 si ya
     tiene esa previsión.
 - No guarda nada de nadie: ni registros ni IP. MET Norway solo ve la IP de

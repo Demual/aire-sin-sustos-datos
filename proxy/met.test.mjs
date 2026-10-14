@@ -130,36 +130,59 @@ test('la app recibe un 304 si ya tiene esa previsión', async () => {
   assert.ok(r.headers.get('Expires'));
 });
 
-test('si MET falla, da la última copia un rato; si no hay ninguna, 502 o 503', async () => {
+test('si MET falla, da la última copia y no le vuelve a llamar en diez minutos', async () => {
   const cache = cacheFalsa();
   const met = metFalso(
     ok(T0 + 30 * MIN),
     () => new Response('lento', { status: 429 }),
-    new TypeError('sin red'),
-    () => new Response('lento', { status: 429 }),
+    ok(T0 + 120 * MIN),
   );
-  await responderMet(pedir('lat=40.42&lon=-3.70'), { cache, fetch: met.fetch, ahora: () => T0 });
-  const caducada = await responderMet(pedir('lat=40.42&lon=-3.70'), {
-    cache,
-    fetch: met.fetch,
-    ahora: () => T0 + 40 * MIN,
-  });
+  const pedirA = (t) => responderMet(pedir('lat=40.42&lon=-3.70'), { cache, fetch: met.fetch, ahora: () => t });
+  await pedirA(T0);
+  const caducada = await pedirA(T0 + 40 * MIN);
   assert.equal(caducada.status, 200);
   assert.equal(caducada.headers.get('X-Aire-Copia'), 'caducada');
   assert.equal(Date.parse(caducada.headers.get('Expires')), T0 + 50 * MIN);
   assert.equal(await caducada.text(), CUERPO);
+  assert.equal(met.llamadas.length, 2);
 
-  const sinNada = await responderMet(pedir('lat=10.00&lon=10.00'), {
-    cache,
-    fetch: met.fetch,
-    ahora: () => T0,
-  });
-  assert.equal(sinNada.status, 502);
-  const limitado = await responderMet(pedir('lat=11.00&lon=11.00'), {
-    cache,
-    fetch: met.fetch,
-    ahora: () => T0,
-  });
+  // Otro móvil a los cinco minutos: la misma copia, sin llamar a MET.
+  const otra = await pedirA(T0 + 45 * MIN);
+  assert.equal(otra.status, 200);
+  assert.equal(await otra.text(), CUERPO);
+  assert.equal(met.llamadas.length, 2);
+
+  // Pasados los diez minutos, vuelve a probar, con su If-Modified-Since.
+  const despues = await pedirA(T0 + 51 * MIN);
+  assert.equal(despues.status, 200);
+  assert.equal(despues.headers.get('X-Aire-Copia'), null);
+  assert.equal(met.llamadas.length, 3);
+  assert.equal(met.llamadas[2].headers['If-Modified-Since'], 'Tue, 14 Oct 2026 09:30:00 GMT');
+});
+
+test('sin copia, 502 o 503, y diez minutos sin llamar a MET por ese punto', async () => {
+  const cache = cacheFalsa();
+  const met = metFalso(
+    new TypeError('sin red'),
+    () => new Response('lento', { status: 429 }),
+    ok(T0 + 60 * MIN),
+  );
+  const pedirA = (query, t) => responderMet(pedir(query), { cache, fetch: met.fetch, ahora: () => t });
+
+  const sinRed = await pedirA('lat=10.00&lon=10.00', T0);
+  assert.equal(sinRed.status, 502);
+  const limitado = await pedirA('lat=11.00&lon=11.00', T0);
   assert.equal(limitado.status, 503);
   assert.equal(limitado.headers.get('Retry-After'), '600');
+  assert.equal(met.llamadas.length, 2);
+
+  // Mientras dura la marca, ni se le llama.
+  const otraVez = await pedirA('lat=11.00&lon=11.00', T0 + 5 * MIN);
+  assert.equal(otraVez.status, 503);
+  assert.equal(met.llamadas.length, 2);
+
+  // Después, sí.
+  const luego = await pedirA('lat=11.00&lon=11.00', T0 + 11 * MIN);
+  assert.equal(luego.status, 200);
+  assert.equal(met.llamadas.length, 3);
 });
