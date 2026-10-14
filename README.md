@@ -70,19 +70,32 @@ usuarios no llamen desde cada móvil (auditoría legal del 14/10/2026, A-R1).
     día más;
   - al caducar, vuelve a pedir con `If-Modified-Since` (un 304 alarga la
     copia);
-  - si MET falla (un 429 sobre todo), da la última copia y no le vuelve a
-    llamar por ese punto en diez minutos; sin copia, un 503 durante ese rato.
-  - A la app le pasa `Expires` y `Last-Modified` y le contesta 304 si ya
-    tiene esa previsión.
-- No guarda nada de nadie: ni registros ni IP. MET Norway solo ve la IP de
+  - espera a MET como mucho 8 segundos;
+  - si MET falla, da la última copia diez minutos, siempre que MET la haya
+    confirmado en las últimas seis horas; si no, un 503 o un 502;
+  - con un 429 (o un 403) frena todo el centro de datos lo que pida su
+    `Retry-After`, y al menos diez minutos;
+  - como mucho 300 llamadas a MET por minuto en cada centro de datos, y 60
+    por IP; lo que sale de la caché no cuenta;
+  - si la caché falla, contesta igual.
+  - A la app le pasa `Expires`, `Last-Modified` y la hora de la previsión
+    (`X-Aire-Prevision`), y le contesta 304 si ya tiene esa previsión.
+- La caché, el freno y los límites son de cada centro de datos de Cloudflare
+  (la Cache API no es global).
+- No guarda registros. Para el límite por IP, la IP se convierte en un
+  resumen SHA-256 con una sal aleatoria de cada centro y cada día, que no
+  permite recuperarla y caduca a los dos minutos. MET Norway solo ve la IP de
   Cloudflare.
 - Coste: el plan gratuito de Workers, que cubre las funciones de Pages
-  (100.000 peticiones al día en la cuenta).
+  (100.000 invocaciones al día en la cuenta, también las de Plic). Esa cuota
+  solo se puede proteger antes de que se ejecute la función, con una regla
+  de límite de peticiones de Cloudflare, y en `*.pages.dev` no las hay: haría
+  falta un dominio propio.
 
 Probarlo en local, sin desplegar nada:
 
 ```bash
-node --test proxy/*.test.mjs
+node --test proxy/met.test.mjs
 npx wrangler@3 pages dev sitio_base --port 8788
 curl "http://127.0.0.1:8788/met/complete?lat=40.42&lon=-3.70"
 ```
