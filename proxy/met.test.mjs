@@ -78,6 +78,8 @@ test('la primera vez pide a MET con su User-Agent y las coordenadas redondeadas'
   assert.equal(met.llamadas[0].url, `${MET_URL}?lat=40.42&lon=-3.70`);
   assert.equal(met.llamadas[0].headers['User-Agent'], AGENTE);
   assert.match(AGENTE, /@/); // con contacto
+  assert.match(AGENTE, /^JRSoft\/1\.0 /);
+  assert.match(AGENTE, /Aire sin sustos, Plic$/);
   assert.equal(met.llamadas[0].headers['If-Modified-Since'], undefined);
   assert.equal(r.headers.get('Last-Modified'), 'Tue, 14 Oct 2026 09:30:00 GMT');
   assert.equal(Date.parse(r.headers.get('Expires')), T0 + 30 * MIN);

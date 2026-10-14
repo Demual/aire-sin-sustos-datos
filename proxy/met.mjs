@@ -21,8 +21,11 @@
 
 export const MET_URL = 'https://api.met.no/weatherapi/locationforecast/2.0/complete';
 
+// Quién pide, con contacto: JR Soft y las apps que usan este servidor (Aire
+// sin sustos y, desde su próxima versión, Plic; decisión del Cuartel General
+// del 14/10/2026). Si se suma otra app, se añade aquí.
 export const AGENTE =
-  'AireSinSustos/1.0 (+https://github.com/Demual/aire-sin-sustos-datos; demual@gmail.com)';
+  'JRSoft/1.0 (+https://github.com/Demual/aire-sin-sustos-datos; demual@gmail.com) Aire sin sustos, Plic';
 
 // La copia ya caducada se guarda un día más: para volver a pedir con
 // If-Modified-Since y para tener algo que dar si MET no contesta.

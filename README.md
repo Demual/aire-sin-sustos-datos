@@ -64,7 +64,8 @@ usuarios no llamen desde cada móvil (auditoría legal del 14/10/2026, A-R1).
   ejecuta en esa ruta: los cuadros siguen siendo estáticos.
 - `proxy/met.mjs` es la lógica, sin nada de Cloudflare:
   - redondea las coordenadas a dos decimales;
-  - pide la versión «complete» con un User-Agent con contacto;
+  - pide la versión «complete» con un User-Agent con contacto que nombra a
+    JR Soft y a las apps que lo usan (Aire sin sustos y Plic);
   - guarda cada respuesta en la caché de Cloudflare hasta su `Expires`, y un
     día más;
   - al caducar, vuelve a pedir con `If-Modified-Since` (un 304 alarga la
