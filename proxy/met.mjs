@@ -48,13 +48,29 @@ export const AGENTE =
  *   corta a los 15 s; con 8 aún le llega la copia de reserva.
  * - copiaViejaMaxS: cuánto tiempo, desde la última vez que MET la confirmó, se
  *   sigue dando una copia caducada cuando MET falla (S4). Después, 503.
- * - metPorMinuto: llamadas a MET por centro de datos y minuto (S3). Por
- *   encima, la copia que haya o un 503. Protege el límite de MET (20 por
- *   segundo para todo nuestro User-Agent) de un barrido de coordenadas.
- * - ipPorMinuto: peticiones por IP y minuto que obligan a llamar a MET (S3);
- *   las que salen de la caché no cuentan. Frena a quien barre coordenadas
- *   desde una IP. Holgado, porque detrás de una IP de operadora (CGNAT) puede
- *   haber muchos móviles, y cada app pide una vez por lugar y por Expires.
+ * Los de S3 no pueden molestar nunca a un usuario normal (Cuartel General,
+ * 14/10/2026). Solo cuentan las peticiones que obligan a llamar a MET: lo que
+ * sale de la caché no gasta nada. Por encima, la copia que haya o un 503.
+ * Las cifras, para miles de usuarios activos al día de Aire y Plic juntos:
+ *   - Aire pide el tiempo al abrirse, una vez por lugar y por Expires (media
+ *     hora o más): unas 6 llamadas a MET por usuario y día (un lugar y medio,
+ *     tres o cuatro aperturas con el Expires ya pasado).
+ *   - Plic, una vez al día en segundo plano y otra al abrirse: unas 2.
+ *   - Con 10.000 usuarios activos al día en cada app, unas 80.000 llamadas a
+ *     MET al día. Casi todo Aire cae en un mismo centro de datos (Madrid).
+ * - metPorDia: presupuesto diario de llamadas a MET por centro de datos (día
+ *   UTC). 150.000: casi el doble de lo de arriba en un solo centro. Hoy manda
+ *   antes la cuota del plan gratuito (unas 100.000 invocaciones al día para
+ *   toda la cuenta, también las que salen de la caché); este presupuesto
+ *   importa si algún día se pasa al plan de pago. Es la cifra que hay que
+ *   tocar si las apps crecen.
+ * - metPorMinuto: freno de ráfagas por centro de datos. 600 (10 por
+ *   segundo): la mitad del límite de MET para todo nuestro User-Agent (20
+ *   por segundo), y unas 30 veces el pico normal de la mañana de arriba.
+ * - ipPorMinuto: por IP. 300 (5 por segundo), del orden de cientos, porque
+ *   detrás de una IP de operadora (CGNAT) puede haber miles de móviles; con
+ *   la caché, un usuario normal hace llamar a MET una o dos veces por hora.
+ *   Solo frena a quien barre coordenadas desde una IP.
  *
  * Lo que ninguno de los dos puede proteger es la cuota del plan gratuito
  * (unas 100.000 invocaciones al día para la cuenta): cuando la función cuenta,
@@ -65,8 +81,9 @@ export const AGENTE =
 export const LIMITES = {
   esperaMetMs: 8000,
   copiaViejaMaxS: 6 * 3600,
-  metPorMinuto: 300,
-  ipPorMinuto: 60,
+  metPorDia: 150_000,
+  metPorMinuto: 600,
+  ipPorMinuto: 300,
 };
 
 // La copia ya caducada se guarda un día más: para volver a pedir con
@@ -157,17 +174,18 @@ async function marcaVigente(c, k, ahora) {
 }
 
 /**
- * Suma uno al contador de este minuto y dice si aún cabía. Es aproximado: la
+ * Suma uno al contador de este periodo (un minuto, o un día) y dice si aún cabía. Es aproximado: la
  * Cache API no tiene operaciones atómicas, y dos peticiones a la vez pueden
  * contar una sola vez. Para frenar un abuso basta.
  */
-async function cabe(c, ruta, ahora, limite) {
-  const minuto = Math.floor(ahora / 60000);
-  const k = clave(`_cuenta/${ruta}/${minuto}`);
+async function cabe(c, ruta, ahora, limite, periodoMs = 60000) {
+  const periodo = Math.floor(ahora / periodoMs);
+  const k = clave(`_cuenta/${ruta}/${periodo}`);
   const m = await c.match(k);
   const n = Number(m ? await m.text() : 0) || 0;
   if (n >= limite) return false;
-  await c.put(k, new Response(String(n + 1), { headers: { 'Cache-Control': 'public, max-age=120' } }));
+  const vida = Math.ceil((2 * periodoMs) / 1000);
+  await c.put(k, new Response(String(n + 1), { headers: { 'Cache-Control': `public, max-age=${vida}` } }));
   return true;
 }
 
@@ -280,7 +298,10 @@ export async function responderMet(request, { cache, fetch, ahora, ip = null, li
       respuesta = texto(429, 'Demasiadas peticiones. Vuelve a intentarlo en un minuto.', {
         'Retry-After': String(Math.ceil((finDelMinuto - t) / 1000)),
       });
-    } else if (!(await cabe(c, 'met', t, limites.metPorMinuto))) {
+    } else if (
+      !(await cabe(c, 'met', t, limites.metPorMinuto)) ||
+      !(await cabe(c, 'met-dia', t, limites.metPorDia, 86400000))
+    ) {
       respuesta = await sinMet(503); // S3: presupuesto de llamadas a MET
     } else {
       const cabeceras = { 'User-Agent': AGENTE, Accept: 'application/json' };

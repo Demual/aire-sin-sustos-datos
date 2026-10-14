@@ -248,6 +248,27 @@ test('S3: un presupuesto de llamadas a MET por minuto', async () => {
   assert.equal(met.llamadas.length, 3);
 });
 
+test('S3: un presupuesto diario de llamadas a MET', async () => {
+  const met = metFalso(ok(T0 + 60 * MIN), ok(T0 + 60 * MIN), ok(T0 + 25 * HORA));
+  const s = servidor(met, { limites: { metPorDia: 2 } });
+  assert.equal((await s.responder('lat=1.00&lon=1.00')).status, 200);
+  s.reloj.t = T0 + 3 * HORA;
+  assert.equal((await s.responder('lat=2.00&lon=2.00')).status, 200);
+  s.reloj.t = T0 + 5 * HORA;
+  assert.equal((await s.responder('lat=3.00&lon=3.00')).status, 503);
+  assert.equal(met.llamadas.length, 2);
+  // Al día siguiente (UTC), otra vez.
+  s.reloj.t = T0 + 24 * HORA;
+  assert.equal((await s.responder('lat=3.00&lon=3.00')).status, 200);
+  assert.equal(met.llamadas.length, 3);
+});
+
+test('S3: los límites por defecto no frenan a un usuario normal', () => {
+  assert.ok(LIMITES.ipPorMinuto >= 100, 'por IP, del orden de cientos (CGNAT)');
+  assert.ok(LIMITES.metPorMinuto * 60 * 24 >= LIMITES.metPorDia);
+  assert.ok(LIMITES.metPorDia >= 100_000, 'al menos lo que da el plan gratuito');
+});
+
 test('S3: un límite por IP de llamadas a MET, sin guardar la IP en claro', async () => {
   const met = metFalso(ok(T0 + 60 * MIN), ok(T0 + 60 * MIN), ok(T0 + 60 * MIN));
   const s = servidor(met, { limites: { ipPorMinuto: 2 }, ip: '203.0.113.7' });

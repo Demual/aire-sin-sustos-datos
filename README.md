@@ -75,8 +75,10 @@ usuarios no llamen desde cada móvil (auditoría legal del 14/10/2026, A-R1).
     confirmado en las últimas seis horas; si no, un 503 o un 502;
   - con un 429 (o un 403) frena todo el centro de datos lo que pida su
     `Retry-After`, y al menos diez minutos;
-  - como mucho 300 llamadas a MET por minuto en cada centro de datos, y 60
-    por IP; lo que sale de la caché no cuenta;
+  - límites que no molestan a un usuario normal (las cifras y su porqué, en
+    `LIMITES` de `proxy/met.mjs`): como mucho 150.000 llamadas a MET al día y
+    600 por minuto en cada centro de datos, y 300 por minuto por IP; lo que
+    sale de la caché no cuenta;
   - si la caché falla, contesta igual.
   - A la app le pasa `Expires`, `Last-Modified` y la hora de la previsión
     (`X-Aire-Prevision`), y le contesta 304 si ya tiene esa previsión.
