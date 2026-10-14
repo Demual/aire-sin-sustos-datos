@@ -52,6 +52,42 @@ La clave del ADS se lee de `~/.cdsapirc` o de la variable `ADS_KEY`. Con
 salen los días pasados: una carpeta con los `.npz` o la web publicada (por
 defecto, la variable `SITIO_URL`).
 
+## El tiempo: servidor intermedio de MET Norway
+
+La app no pide el tiempo a `api.met.no`: lo pide a esta misma web,
+`/met/complete?lat=..&lon=..`, y la web se lo pide a MET Norway. Sus
+condiciones (https://api.met.no/doc/TermsOfService) piden que las apps con
+usuarios no llamen desde cada móvil (auditoría legal del 14/10/2026, A-R1).
+
+- `functions/met/complete.js` es una función de Cloudflare Pages. Se publica
+  con la web, en el mismo `wrangler pages deploy` de la tarea, y solo se
+  ejecuta en esa ruta: los cuadros siguen siendo estáticos.
+- `proxy/met.mjs` es la lógica, sin nada de Cloudflare:
+  - redondea las coordenadas a dos decimales;
+  - pide la versión «complete» con un User-Agent con contacto;
+  - guarda cada respuesta en la caché de Cloudflare hasta su `Expires`, y un
+    día más;
+  - al caducar, vuelve a pedir con `If-Modified-Since` (un 304 alarga la
+    copia);
+  - si MET falla, da la última copia diez minutos.
+  - A la app le pasa `Expires` y `Last-Modified` y le contesta 304 si ya
+    tiene esa previsión.
+- No guarda nada de nadie: ni registros ni IP. MET Norway solo ve la IP de
+  Cloudflare.
+- Coste: el plan gratuito de Workers, que cubre las funciones de Pages
+  (100.000 peticiones al día en la cuenta).
+
+Probarlo en local, sin desplegar nada:
+
+```bash
+node --test proxy/*.test.mjs
+npx wrangler@3 pages dev sitio_base --port 8788
+curl "http://127.0.0.1:8788/met/complete?lat=40.42&lon=-3.70"
+```
+
+Desde el emulador de Android, la app se compila con
+`--dart-define=MET_URL=http://10.0.2.2:8788/met`.
+
 ## Los ficheros
 
 `/v1/{lat0}_{lon0}.json`, con la esquina suroeste del cuadro redondeada hacia

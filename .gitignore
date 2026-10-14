@@ -8,3 +8,7 @@ __pycache__/
 
 # La clave del ADS va en ~/.cdsapirc o en el secreto ADS_KEY, nunca aquí.
 .cdsapirc
+
+# Estado de `wrangler pages dev` (pruebas en local del proxy de MET Norway).
+.wrangler/
+node_modules/
